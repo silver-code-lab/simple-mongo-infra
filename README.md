@@ -9,17 +9,19 @@ It is part of a 3-repo setup:
 
 ---
 
-##  Architecture
+## 🚀 Architecture
 
 ```mermaid
 flowchart LR
   Dev[(Developer)]
-  A[Repo 1: simple-mongo-app\nCI: Build & Push Docker Image]
-  B[Docker Hub\nartium777/simple-mongo-app:latest]
-  C[Repo 2: simple-mongo-deploy\nGH Actions: SSH + docker-compose]
-  D[Repo 3: simple-mongo-infra\nTerraform (EC2, SG, EIP)]
-  E[(AWS EC2\nUbuntu 22.04\n:8000)]
+  A[Repo 1: simple-mongo-app<br/>CI: Build & Push Docker Image]
+  B[Docker Hub<br/>artium777/simple-mongo-app:latest]
+  C[Repo 2: simple-mongo-deploy<br/>GH Actions: SSH + docker-compose]
+  D[Repo 3: simple-mongo-infra<br/>Terraform (EC2, SG, EIP)]
+  E[(AWS EC2<br/>Ubuntu 22.04<br/>:8000)]
+
   Dev --> A --> B
   Dev --> C -->|pull & up| E
   Dev --> D -->|terraform apply| E
   E -->|HTTP :8000| User[(Users)]
+
