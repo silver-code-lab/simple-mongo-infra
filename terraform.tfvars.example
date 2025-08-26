@@ -1,0 +1,15 @@
+aws_region       = "ap-south-1"
+key_name         = "YOUR_KEYPAIR_NAME_IN_MUMBAI"
+allowed_ssh_cidr = "YOUR.IPV4.ADDR/32"   # למשל "1.2.3.4/32"
+
+project_name     = "simple-mongo"
+instance_type    = "t3.micro"
+app_port         = 8000
+allowed_app_cidr = "0.0.0.0/0"
+root_volume_size = 16
+allocate_eip     = true
+
+tags = {
+  Environment = "dev"
+  Owner       = "artium"
+}
