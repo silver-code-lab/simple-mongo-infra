@@ -7,7 +7,7 @@ variable "project_name" {
 variable "aws_region" {
   description = "AWS region"
   type        = string
-  default     = "ap-south-1" # Mumbai
+  default     = "ap-south-1" 
 }
 
 variable "instance_type" {
