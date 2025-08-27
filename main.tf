@@ -1,4 +1,4 @@
-# --- Ubuntu 22.04 LTS AMI (Canonical) ---
+
 data "aws_ami" "ubuntu" {
   most_recent = true
   owners      = ["099720109477"]
@@ -14,10 +14,10 @@ data "aws_ami" "ubuntu" {
   }
 }
 
-# --- וודא שיש Default VPC (אם אין - ייווצר; אם יש - ישתמש בקיים) ---
+
 resource "aws_default_vpc" "default" {}
 
-# --- מצא את כל ה-Default Subnets ב-VPC הדיפולטי ובחר את הראשון ---
+
 data "aws_subnets" "default_az_subnets" {
   filter {
     name   = "vpc-id"
@@ -29,7 +29,7 @@ data "aws_subnets" "default_az_subnets" {
   }
 }
 
-# --- Security Group: SSH + App Port ---
+
 resource "aws_security_group" "app_sg" {
   name        = "${var.project_name}-sg"
   description = "SG for ${var.project_name} app"
@@ -66,7 +66,7 @@ resource "aws_security_group" "app_sg" {
   }, var.tags)
 }
 
-# --- EC2 Instance (Docker+Compose ב-user_data) ---
+
 resource "aws_instance" "app" {
   ami                         = data.aws_ami.ubuntu.id
   instance_type               = var.instance_type
@@ -113,7 +113,7 @@ resource "aws_instance" "app" {
   }, var.tags)
 }
 
-# --- Elastic IP (IP יציב) ---
+
 resource "aws_eip" "app" {
   count    = var.allocate_eip ? 1 : 0
   domain   = "vpc"
