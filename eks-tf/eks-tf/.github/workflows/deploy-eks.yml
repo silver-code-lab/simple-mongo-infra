@@ -1,0 +1,77 @@
+name: Deploy to EKS (Mumbai)
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ap-south-1
+  CLUSTER_NAME: simple-mongo-eks
+  NAMESPACE: simple-mongo
+  IMAGE_REPO: artium777/simple-mongo
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # kubectl תואם ל-1.29 (גרסת הקלאסטר)
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: 'v1.29.10'
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ env.AWS_REGION }}
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig --region "$AWS_REGION" --name "$CLUSTER_NAME"
+          kubectl version --short || true
+          kubectl get nodes -o wide
+
+      - name: Apply manifests (Mongo + App)
+        run: |
+          kubectl create ns "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+          # חשוב: לא מחילים mongo-pvc.yaml – ה-StatefulSet יוצר PVC לבד.
+          kubectl -n "$NAMESPACE" apply -f k8s/mongo-service.yaml -f k8s/mongo-statefulset.yaml
+          kubectl -n "$NAMESPACE" apply -f k8s/app-deployment.yaml -f k8s/app-service.yaml
+
+      - name: Point Deployment to image by SHA
+        env:
+          DOCKER_IMAGE: ${{ env.IMAGE_REPO }}:${{ github.sha }}
+        run: |
+          kubectl -n "$NAMESPACE" set image deploy/app app="$DOCKER_IMAGE"
+          kubectl -n "$NAMESPACE" set env deploy/app MONGO_URL="mongodb://mongo:27017/yourdb" --overwrite=true
+
+      - name: Ensure Service is internet-facing NLB
+        run: |
+          kubectl -n "$NAMESPACE" patch svc app --type='merge' -p '
+          metadata:
+            annotations:
+              service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+              service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+          spec:
+            type: LoadBalancer
+            ports:
+            - name: http
+              port: 80
+              targetPort: 8000
+          '
+
+      - name: Wait for rollout
+        run: |
+          kubectl -n "$NAMESPACE" rollout status statefulset/mongo --timeout=600s
+          kubectl -n "$NAMESPACE" rollout status deploy/app --timeout=600s
+
+      - name: Show external endpoint
+        run: |
+          kubectl -n "$NAMESPACE" get svc app -o wide
+          EXTERNAL=$(kubectl -n "$NAMESPACE" get svc app -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+          echo "EXTERNAL: http://$EXTERNAL"
